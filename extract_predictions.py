@@ -23,7 +23,7 @@ parser.add_argument('model', type=str, default='model.pt',
                     help='Meta file stored once finished training the corpus')
 parser.add_argument('-i', '--input', required=True,
                     help='Input sentences in Tal\'s format')
-parser.add_argument('--data', default='data/wikitext-2-full/')
+parser.add_argument('--data', default='data/wikitext/')
 # parser.add_argument('-v', '--vocabulary', default='reduced_vocab.txt')
 parser.add_argument('-o', '--output', default='output/', help='Destination for the output vectors')
 parser.add_argument('--perplexity', action='store_true', default=False)
@@ -166,6 +166,9 @@ for i, s in enumerate(tqdm(sentences)):
         out, hidden, mems = model(inp, hidden, mems=mems, return_h=False)
         out = model.decoder(out)
         out = torch.nn.functional.log_softmax(out[0], dim=-1).unsqueeze(0)
+        vp = gold.loc[i, 'verb_pos']
+        vp += len(s) if vp < 0 else 0
+        gold.loc[i,'verb_pos'] = vp
         if j==gold.loc[i,'verb_pos']-1:
             assert s[j+1] == gold.loc[i, 'correct'].lower()
             # Store surprisal of target word

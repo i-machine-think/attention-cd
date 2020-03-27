@@ -3,10 +3,11 @@
 #SBATCH --job-name=SHA-LSTM
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --time=50:00:00
+#SBATCH --time=60:00:00
 #SBATCH --mem=10000M
 #SBATCH --partition=gpu_shared
 #SBATCH --gres=gpu:1
+#SBATCH --output=training_WIKI_%a.txt
 
 seed=$SLURM_ARRAY_TASK_ID
 fn="save/WIKI_$seed.pt"

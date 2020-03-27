@@ -3,7 +3,8 @@ apex/
 save/
 data/
 corpus.*
-pytorch-lamb/
+pytorch_lamb/
+predictions_output/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

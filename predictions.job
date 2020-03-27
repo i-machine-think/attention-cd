@@ -5,15 +5,27 @@
 #SBATCH --ntasks=1
 #SBATCH --time=0:10:00
 #SBATCH --mem=16000M
-#SBATCH --partition=gpu_short
+#SBATCH --partition=gpu_shared
 #SBATCH --gres=gpu:1
 
-model="save/WIKI.pt"
-output="output/nounpp/nounpp"
-stimuli="stimuli/nounpp/nounpp"
+# $1 -> path to model
+# $2 -> name of task
 
-python -u extract_predictions.py $model -i $stimuli -o $output --cuda --eos-separator "<eos>" --format pkl --lang en --uppercase-first-word
-python get_agreement_accuracy_for_contrast.py -ablation-results $output.abl -info $stimuli.info -condition number_1=singular number_2=singular
-python get_agreement_accuracy_for_contrast.py -ablation-results $output.abl -info $stimuli.info -condition number_1=singular number_2=plural
-python get_agreement_accuracy_for_contrast.py -ablation-results $output.abl -info $stimuli.info -condition number_1=plural number_2=singular
-python get_agreement_accuracy_for_contrast.py -ablation-results $output.abl -info $stimuli.info -condition number_1=plural number_2=plural
+model=$1
+task=$2 #adv adv_adv adv_conjunction namepp nounpp nounpp_adv simple
+
+output="output/$task/$task"
+stimuli="stimuli/$task/$task"
+
+echo $model
+echo $task
+python -u extract_predictions.py $model -i $stimuli -o $output --cuda --eos-separator "<eos>" --format pkl --lang en --uppercase-first-word > /dev/null
+if [[ "$task" == *"nounpp"* ]]; then
+    python get_agreement_accuracy_for_contrast.py -ablation-results $output.abl -info $stimuli.info -condition number_1=singular number_2=singular
+    python get_agreement_accuracy_for_contrast.py -ablation-results $output.abl -info $stimuli.info -condition number_1=singular number_2=plural
+    python get_agreement_accuracy_for_contrast.py -ablation-results $output.abl -info $stimuli.info -condition number_1=plural number_2=singular
+    python get_agreement_accuracy_for_contrast.py -ablation-results $output.abl -info $stimuli.info -condition number_1=plural number_2=plural
+else
+    python get_agreement_accuracy_for_contrast.py -ablation-results $output.abl -info $stimuli.info -condition number_1=singular
+    python get_agreement_accuracy_for_contrast.py -ablation-results $output.abl -info $stimuli.info -condition number_1=plural
+fi

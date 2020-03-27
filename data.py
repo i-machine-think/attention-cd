@@ -4,12 +4,28 @@ import torch
 from collections import Counter
 
 
+class UnknownDict(dict):
+    def __init__(self, *args, **kwargs):
+        self.update(*args, **kwargs)
+
+    def __getitem__(self, key):
+        if key in self:
+            return dict.__getitem__(self, key)
+        else:
+            return dict.__getitem__(self, '<unk>')
+
+    def update(self, *args, **kwargs):
+        for k, v in dict(*args, **kwargs).items():
+            self[k] = v
+
+
 class Dictionary(object):
     def __init__(self):
-        self.word2idx = {}
+        self.word2idx = UnknownDict()
         self.idx2word = []
         self.counter = Counter()
         self.total = 0
+        self.add_word('<unk>')
 
     def add_word(self, word, freq=1):
         if word not in self.word2idx:
@@ -25,11 +41,30 @@ class Dictionary(object):
 
 
 class Corpus(object):
-    def __init__(self, path):
+    def __init__(self, path, vocab=None):
         self.dictionary = Dictionary()
-        self.train = self.tokenize(os.path.join(path, 'train.txt'), construct_dictionary=True)
+
+        if vocab:
+            self.dict_from_vocab(vocab)
+
+        construct_dictionary = not vocab
+        self.train = self.tokenize(os.path.join(path, 'train.txt'), construct_dictionary=construct_dictionary)
         self.valid = self.tokenize(os.path.join(path, 'valid.txt'))
         self.test = self.tokenize(os.path.join(path, 'test.txt'))
+
+    def dict_from_vocab(self, vocab):
+        assert os.path.exists(vocab)
+
+        with open(vocab, 'r') as f:
+            for line in f:
+                for word in line.split() + ['<eos>']:
+                    self.dictionary.add_word(word)
+
+        d = Dictionary()
+        for wid, freq in sorted(self.dictionary.counter.items(), key=lambda x: x[1], reverse=True):
+            d.add_word(self.dictionary.idx2word[wid], freq)
+        self.dictionary = d
+
 
     def tokenize(self, path, construct_dictionary=False):
         """Tokenizes a text file."""

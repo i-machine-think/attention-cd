@@ -7,8 +7,8 @@ import torch
 import torch.nn as nn
 
 import torch.nn.functional as F
-
-from apex.normalization.fused_layer_norm import FusedLayerNorm as LayerNorm
+from torch.nn import init
+from torch.nn.parameter import Parameter
 
 import torch.utils
 import torch.utils.checkpoint
@@ -49,6 +49,41 @@ class Overparam(nn.Module):
         c, f = self.l1(x).split(self.nhid, dim=-1)
         #c, f = self.l2(self.inner_act(self.l1(x))).split(self.nhid, dim=-1)
         return torch.sigmoid(f) * torch.tanh(c)
+
+
+class LayerNorm(torch.nn.Module):
+    def __init__(self, normalized_shape, eps=1e-5, elementwise_affine=True):
+        super(LayerNorm, self).__init__()
+
+        if isinstance(normalized_shape, numbers.Integral):
+            normalized_shape = (normalized_shape,)
+        self.normalized_shape = torch.Size(normalized_shape)
+        self.eps = eps
+        self.elementwise_affine = elementwise_affine
+        if self.elementwise_affine:
+            self.weight = Parameter(torch.Tensor(*normalized_shape))
+            self.bias = Parameter(torch.Tensor(*normalized_shape))
+        else:
+            self.register_parameter('weight', None)
+            self.register_parameter('bias', None)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        if self.elementwise_affine:
+            init.ones_(self.weight)
+            init.zeros_(self.bias)
+
+    def forward(self, input):
+        return  F.layer_norm(
+            input, self.normalized_shape, self.weight, self.bias, self.eps
+        )
+
+    def extra_repr(self):
+        return '{normalized_shape}, eps={eps}, ' \
+            'elementwise_affine={elementwise_affine}'.format(**self.__dict__)
+
+
+
 
 class Attention(nn.Module):
     def __init__(self, nhid, q=True, k=False, v=False, r=False, heads=1, dropout=None):
